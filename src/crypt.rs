@@ -1,11 +1,17 @@
 extern crate libc;
-use libc::{
+use self::libc::{
     c_char,
     c_long,
-    c_int
+    c_int,
+    strlen
 };
 
+use std::ffi::CString;
+use std::vec::Vec;
+use std::mem::uninitialized;
+
 #[repr(C)]
+#[allow(dead_code)]
 struct crypt_data {
     keysched         : [c_char; 16 * 8],
     sb0              : [c_char; 32768],
@@ -26,25 +32,23 @@ extern "C" {
                 data : *mut crypt_data) -> *mut c_char;
 }
 
-use libc::funcs::c95::string::strlen;
-use std::ffi::CString;
-use std::vec;
 
 pub fn crypt (key: CString, salt: CString) -> Option <Vec <u8>>
 {
     let ckey       = key.as_ptr ();
     let csalt      = salt.as_ptr ();
-    let data       = crypt_data {initialized : 0};
     let static_str = unsafe {
-        crypt_r (ckey, csalt, &data)
+        let mut data = uninitialized::<crypt_data> ();
+        data.initialized = 0;
+        crypt_r (ckey, csalt, &mut data)
     };
     if static_str.is_null () {
         None
     }
     else {
         let result = unsafe {
-            let length = strlen (static_str);
-            Vec::<u8>::from_raw_parts (static_str, length, length)
+            let length = strlen (static_str) as usize;
+            Vec::<u8>::from_raw_buf (static_str as *const u8, length)
         };
         Some (result)
     }

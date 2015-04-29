@@ -2,3 +2,6 @@
 name = "crypt"
 version = "0.1.0"
 authors = ["Stuart Olsen <so1132@txstate.edu>"]
+
+[dependencies]
+libc = "0.1"
